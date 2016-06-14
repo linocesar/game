@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+        <title>animacao fundo</title>
+    <script src="animacao.js"></script>
+    <script src="estrada.js" charset="utf-8"></script>
+  </head>
+  <body>
+    <canvas id="canvas" width="500" height="500"></canvas>
+
+    <script type="text/javascript">
+
+    var imgFundo = new Image();
+    imgFundo.src = "img/estrada.png";
+    imgFundo.onload = carregar;
+
+    function carregar() {
+
+      iniciar();
+    }
+
+    function iniciar() {
+
+        var canvas = document.getElementById("canvas");
+        var context = canvas.getContext('2d');
+        var fundo = new Estrada(context, imgFundo);
+        fundo.velocidade = 5;
+
+        var animacao = new Animacao(context);
+        animacao.novoSprite(fundo);
+        animacao.ligar();
+    }
+
+
+
+    </script>
+  </body>
+</html>
