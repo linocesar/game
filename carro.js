@@ -1,6 +1,6 @@
 function Carro(context, imagem, teclado){
-this.x = 0;
-this.y = 0;
+this.x = 200;
+this.y = 400;
 this.context = context;
 this.imagem = imagem;
 this.teclado = teclado;
@@ -11,11 +11,11 @@ this.velocidade = 0;
 Carro.prototype.atualizar = function () {
 
     var limiteADireita = 2*this.context.canvas.width/3;
-    var limiteAEsquerda = this.context.canvas.width/3;
+    var limiteAEsquerda = this.context.canvas.width/4 - 10;
     if(this.teclado.pressionada(SETA_DIREITA) && this.x <= limiteADireita){
       this.x += 10;
     }
-    if(this.teclado.pressionada(SETA_ESQUERDA) && this.y >= limiteAEsquerda){
+    if(this.teclado.pressionada(SETA_ESQUERDA) && this.x >= limiteAEsquerda){
       this.x -= 10;
     }
 

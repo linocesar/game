@@ -4,6 +4,8 @@
         <title>animacao fundo</title>
     <script src="animacao.js"></script>
     <script src="estrada.js" charset="utf-8"></script>
+    <script src="carro.js" charset="utf-8"></script>
+    <script src="teclado.js" charset="utf-8"></script>
   </head>
   <body>
     <canvas id="canvas" width="500" height="500"></canvas>
@@ -14,6 +16,10 @@
     imgFundo.src = "img/estrada.png";
     imgFundo.onload = carregar;
 
+    var imgCarro = new Image();
+    imgCarro.src = "img/carro.png";
+
+
     function carregar() {
 
       iniciar();
@@ -23,11 +29,14 @@
 
         var canvas = document.getElementById("canvas");
         var context = canvas.getContext('2d');
+        var teclado = new Teclado(document);
         var fundo = new Estrada(context, imgFundo);
         fundo.velocidade = 5;
+        var carro = new Carro(context, imgCarro, teclado);
 
         var animacao = new Animacao(context);
         animacao.novoSprite(fundo);
+        animacao.novoSprite(carro);
         animacao.ligar();
     }
 
