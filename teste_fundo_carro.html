@@ -19,6 +19,8 @@
     var imgCarro = new Image();
     imgCarro.src = "img/carro.png";
 
+    var imgOleo = new Image();
+    imgOleo.src = "img/oleo2.png";
 
     function carregar() {
 
@@ -33,7 +35,7 @@
         var fundo = new Estrada(context, imgFundo);
         fundo.velocidade = 5;
         var carro = new Carro(context, imgCarro, teclado);
-
+        var novo = new
         var animacao = new Animacao(context);
         animacao.novoSprite(fundo);
         animacao.novoSprite(carro);
