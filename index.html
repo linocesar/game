@@ -1,0 +1,381 @@
+<html>
+
+<head>
+   <title>My race</title>
+   <script src="animacao.js"></script>
+   <script src="teclado.js"></script>
+   <script src="colisor.js"></script>
+   <script src="fundo.js"></script>
+   <script src="carro.js"></script>
+   <script src="inimigo.js"></script>
+   <script src="oleo.js"></script>
+   <script src="buraco.js"></script>
+   <script src="spritesheet.js"></script>
+   <script src="explosao.js"></script>
+   <script src="painel.js"></script>
+   <script src="derrapagem.js"></script>
+   <script src="buracada.js"></script>
+   <style>
+   #link_jogar {
+      /* Inicia oculto */
+      display: none;
+
+      /* Cores e fundo */
+      color: yellow;
+      background: url(img/botao-jogar.png);
+
+      /* Fonte */
+      font-size: 20px;
+      font-family: sans-serif;
+
+      /* Sem sublinhado e com sombra */
+      text-decoration: none;
+      text-shadow: 2px 2px 5px black;
+
+      /* Posicionamento */
+      position: absolute;
+      left: 220px;
+      top: 330px;
+
+      /* A imagem do botão é 72x72, descontamos os paddings */
+      width: 52px;
+      height: 26px;
+      padding: 23px 10px;
+   }
+   </style>
+</head>
+
+<body>
+   <canvas id="canvas_animacao" width="500" height="500"></canvas>
+
+   <a id="link_jogar" href="javascript: iniciarJogo()">Jogar</a>
+
+   <script>
+      // Canvas e Context
+      var canvas = document.getElementById('canvas_animacao');
+      var context = canvas.getContext('2d');
+
+      // Variáveis principais
+      var imagens, animacao, teclado, colisor, inimigo,oleo, buraco, criadorInimigos, criadorObstaculos;
+      var totalImagens = 0, carregadas = 0;
+      var musicaAcao;
+      var hiscore;
+      var ciclo = 1;
+      var contInimigos = 0;
+
+      // Começa carregando as imagens e músicas
+      carregarImagens();
+      carregarMusicas();
+
+      function carregarImagens() {
+         // Objeto contendo os nomes das imagens
+         imagens = {
+            estrada:    'estrada.png',
+            carro:      'carros-sprites.png',
+            inimigo:    'trolscar.png',
+            oleo:       'oleo.png',
+            buraco:     'buraco.png',
+            derrapagem: 'derrapagem2.png',
+            buracada:   'buracada2.png',
+            explosao:   'explosao.png'
+
+         };
+
+         // Carregar todas
+         for (var i in imagens) {
+            var img = new Image();
+            img.src = 'img/' + imagens[i];
+            img.onload = carregando;
+            totalImagens++;
+
+            // Substituir o nome pela imagem
+            imagens[i] = img;
+         }
+      }
+
+      function carregando() {
+         context.save();
+
+         // Fundo
+         context.drawImage(imagens.estrada, 0, 0, canvas.width,
+                           canvas.height);
+
+         // Texto "Carregando"
+         context.fillStyle = 'white';
+         context.strokeStyle = 'black';
+         context.font = '50px sans-serif';
+         context.fillText("Carregando...", 100, 200);
+         context.strokeText("Carregando...", 100, 200);
+
+         // Barra de loading
+         carregadas++;
+         var tamanhoTotal = 300;
+         var tamanho = carregadas / totalImagens * tamanhoTotal;
+         context.fillStyle = 'yellow';
+         context.fillRect(100, 250, tamanho, 50);
+
+         context.restore();
+
+         if (carregadas == totalImagens) {
+            iniciarObjetos();
+            mostrarLinkJogar();
+         }
+      }
+
+      function iniciarObjetos() {
+         // Objetos principais
+         animacao = new Animacao(context);
+         teclado = new Teclado(document);
+         colisor = new Colisor();
+         estrada = new Fundo(context, imagens.estrada);
+         carro = new Carro(context, teclado, imagens.carro, imagens.explosao, imagens.derrapagem, imagens.buracada);
+         painel = new Painel(context, carro);
+
+         // Ligações entre objetos
+         animacao.novoSprite(estrada);
+
+         animacao.novoSprite(painel);
+         animacao.novoSprite(carro);
+        // animacao.novoSprite(oleo);
+
+         colisor.novoSprite(carro);
+
+         animacao.novoProcessamento(colisor);
+
+         configuracoesIniciais();
+      }
+
+      function configuracoesIniciais() {
+         // Fundo
+         estrada.velocidade = 300;
+
+         // Carro
+         carro.posicionar();
+         carro.velocidade = 300;
+
+         // Inimigos
+         criacaoInimigos();
+
+         // Game Over
+         carro.acabaramVidas = function() {
+            animacao.desligar();
+            gameOver();
+         }
+
+         // Pontuação
+         colisor.aoColidir = function(o1, o2) {
+            // Carro com outro carro
+            if ( (o1 instanceof Carro && o2 instanceof Inimigo) ||
+                 (o1 instanceof Inimigo && o2 instanceof Carro) )
+               painel.pontuacao -= 10;
+            // if((o1 instanceof Carro && o2 instanceof Oleo))
+            //     painel.pontuacao -= 5;
+
+            if(o1 instanceof Carro && o2 instanceof Buraco)
+                painel.pontuacao -=5;
+         }
+      }
+
+      function criacaoInimigos() {
+         criadorInimigos = {
+            ultimoInimigo: new Date().getTime(),
+
+            processar: function() {
+               var agora = new Date().getTime();
+               var decorrido = agora - this.ultimoInimigo;
+
+               if (decorrido > 1000) {
+                  novoInimigo();
+                  contInimigos++;
+                  aumentarDificuldade();
+                  this.ultimoInimigo = agora;
+
+               }
+            }
+         };
+
+         animacao.novoProcessamento(criadorInimigos);
+      }
+
+
+      function aumentarDificuldade(){
+
+          if(contInimigos%5 == 1){
+            estrada.velocidade +=20;
+          }
+
+      }
+
+      function novoInimigo() {
+
+         var rdn = Math.floor(Math.random()*3);
+
+         switch (rdn) {
+           case 0:
+               var imgInimigo = imagens.inimigo;
+               var inimigo = new Inimigo(context, imgInimigo, imagens.explosao);
+               this.painel.pontuacao +=10;
+               // Mínimo: 500; máximo: 1000
+               inimigo.velocidade =
+               Math.floor( estrada.velocidade + Math.random() * (1000 - 500 + 1) );
+
+               // Mínimo: L/4; máximo: L/2 - inimigo
+               inimigo.x = canvas.width/4 +
+               Math.floor(Math.random() *
+                         (canvas.width/2 - imgInimigo.width + 1) );
+
+              // Descontar a altura
+               inimigo.y = -imgInimigo.height;
+
+               animacao.novoSprite(inimigo);
+               colisor.novoSprite(inimigo);
+          break;
+
+          case 1:
+             var imgObstaculo = imagens.buraco;
+             var buraco = new Buraco(context, imgObstaculo);
+             this.painel.pontuacao +=10;
+             // Mínimo: 500; máximo: 1000
+             buraco.velocidade = estrada.velocidade;
+
+             // Mínimo: L/4; máximo: L/2 - inimigo
+             buraco.x = canvas.width/4 + Math.floor(Math.random() *
+                           (canvas.width/2 - imgObstaculo.width + 1) );
+
+             // Descontar a altura
+             buraco.y = -imgObstaculo.height;
+
+             animacao.novoSprite(buraco);
+             colisor.novoSprite(buraco);
+          break;
+
+          case 2:
+             var imgObstaculo = imagens.oleo;
+             var oleo = new Oleo(context, imgObstaculo);
+             this.painel.pontuacao +=10;
+             // Mínimo: 500; máximo: 1000
+             oleo.velocidade = estrada.velocidade;
+
+             // Mínimo: L/4; máximo: L/2 - inimigo
+             oleo.x = canvas.width/4 +
+                Math.floor(Math.random() *
+                           (canvas.width/2 - imgObstaculo.width + 1) );
+
+             // Descontar a altura
+             oleo.y = -imgObstaculo.height;
+
+             animacao.novoSprite(oleo);
+             colisor.novoSprite(oleo);
+           break;
+           default:
+
+         }
+
+      }
+
+
+      function pausarJogo() {
+         if (animacao.ligado) {
+            animacao.desligar();
+            context.save();
+            context.fillStyle = 'white';
+            context.strokeStyle = 'black';
+            context.font = '50px sans-serif';
+            context.fillText("Pausado", 160, 200);
+            context.strokeText("Pausado", 160, 200);
+            context.restore();
+         }
+         else {
+            criadorInimigos.ultimoInimigo = new Date().getTime();
+            animacao.ligar();
+         }
+      }
+
+
+      function carregarMusicas() {
+         musicaAcao = new Audio();
+         musicaAcao.src = 'snd/musica-acao.mp3';
+         musicaAcao.volume = 0.5;
+         musicaAcao.loop = true;
+         musicaAcao.load();
+         musicaAcao.play();
+      }
+
+      function mostrarLinkJogar() {
+         document.getElementById('link_jogar').style.display =
+            'block';
+      }
+
+      function iniciarJogo() {
+         criadorInimigos.ultimoInimigo = new Date().getTime();
+
+
+         // Pausa
+         teclado.disparou(ENTER, pausarJogo);
+
+         document.getElementById('link_jogar').style.display =
+            'none';
+        musicaAcao.play();
+         animacao.ligar();
+      }
+
+      function gameOver() {
+
+        if(ciclo == 1){
+          hiscore = painel.pontuacao;
+          ciclo++;
+        }else if (hiscore < painel.pontuacao) {
+          hiscore = painel.pontuacao;
+          ciclo++;
+        }
+        contInimigos = 0;
+
+         // Pausa
+         teclado.disparou(ENTER, null);
+
+         // Parar a música e reiniciar
+         musicaAcao.pause();
+         musicaAcao.currentTime = 0.0;
+
+         // Fundo
+         context.drawImage(imagens.estrada, 0, 0, canvas.width,
+                           canvas.height);
+
+         // Texto "Game Over"
+         context.save();
+         context.fillStyle = 'white';
+         context.strokeStyle = 'black';
+         context.font = '70px sans-serif';
+         context.fillText("GAME OVER", 40, 200);
+         context.strokeText("GAME OVER", 40, 200);
+         context.fillStyle = 'yellow';
+         context.strokeStyle = 'black';
+         context.font = '30px sans-serif';
+         context.fillText("HI-SCORE: " + this.hiscore,150,280);
+         context.restore();
+
+         // Volta o link "Jogar"
+         mostrarLinkJogar();
+
+         // Restaurar as condições da inimigo
+         carro.vidasExtras = 0;
+         carro.posicionar();
+         painel.pontuacao = 0;
+         estrada.velocidade = 300;
+         animacao.novoSprite(carro);
+         colisor.novoSprite(carro);
+
+         // Tirar todos os inimigos da tela
+         removerInimigos();
+      }
+
+      function removerInimigos() {
+         for (var i in animacao.sprites) {
+            if (animacao.sprites[i] instanceof Inimigo)
+               animacao.excluirSprite(animacao.sprites[i]);
+         }
+      }
+   </script>
+</body>
+
+</html>
